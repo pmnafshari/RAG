@@ -18,12 +18,12 @@ tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v
 # Load model
 model = AutoModel.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
 
-def get_embeddings(text):
+def embed_texts(text):
     inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
     with torch.no_grad():
         outputs = model(**inputs)
         embeddings = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
-    return embeddings
+        return embeddings
 
 #Get Embeddings Dimentions
 embeddings_exmple = embed_texts("Hello, how are you?")
@@ -59,24 +59,24 @@ for i, embedding in enumerate(embeddings):
 #Define a simple retriever
 def simple_retriever(query):
   query_embedding = embed_texts([query])
-   D, I = index.search(query_embedding, k=1)
-    return index_to_docstore_id[I[0][0]] if len(I) > 0 and I[0][0] in index_to_docstore_id else None
+  D, I = index.search(query_embedding, k=1)
+  return index_to_docstore_id[I[0][0]] if len(I) > 0 and I[0][0] in index_to_docstore_id else None
 
 #Create the RAG Chain
 class SimpleRetrieverlQA:
-    def __init__(self, retriever):
+    def __init__(self, llm, retriever):
         self.llm = llm
         self.retriever = retriever
 
     def run(self, query):
         return self.retriever(query)
         response = self.llm(f"Context: {context}\nQuestion: {query}")
-  return response
+        return response
 
 qa_chain = SimpleRetrieverlQA(llm = llm, retriever = simple_retriever)
 
 #Questions
-questions = ["What is RAG?", "Why is RAG used?", "How does RAG work?"]  
+questions = "Why is RAG used?"
 
 #Get Answers
 answers = qa_chain.run(questions)
